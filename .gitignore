@@ -4,5 +4,43 @@ dist/
 coverage/
 .DS_Store
 *.log
-.env*
+
+# Environment variables - NEVER commit these
+.env
+.env.local
+.env.*.local
+.env.prod
+.env.development
+.env.test
 !.env.example
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# OS specific files
+Thumbs.db
+.AppleDouble
+.LSOverride
+
+# Secrets and sensitive files
+*.pem
+*.key
+*.crt
+*.p8
+secrets.json
+config.json
+credentials.json
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Dependencies lock files (sometimes committed, but be careful)
+# package-lock.json
+# yarn.lock
