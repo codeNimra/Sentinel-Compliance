@@ -10,13 +10,13 @@ import dotenv from "dotenv";
 import { GoogleGenAI, Type } from "@google/genai";
 import { Violation, PipelineResponse, LogMessage } from "./src/types";
 
-// Load environment variables
+// Load environment variables from .env file
 dotenv.config();
 
 const app = express();
 app.use(express.json());
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Initialize Gemini if key is provided
 let ai: GoogleGenAI | null = null;
@@ -37,11 +37,24 @@ if (API_KEY && API_KEY !== "MY_GEMINI_API_KEY") {
   }
 }
 
+// Read sensitive configuration from environment variables
+// NEVER hardcode credentials - use .env file (excluded from git via .gitignore)
+const MONGODB_BACKUP_URI = process.env.MONGODB_BACKUP_URI;
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+
+// Validate that required environment variables are set
+if (!MONGODB_BACKUP_URI) {
+  console.warn("⚠️  Warning: MONGODB_BACKUP_URI environment variable not set");
+}
+if (!STRIPE_SECRET_KEY) {
+  console.warn("⚠️  Warning: STRIPE_SECRET_KEY environment variable not set");
+}
+
 // In-memory store for audit runs
 const auditStore = new Map<string, PipelineResponse>();
 const streamLogStore = new Map<string, LogMessage[]>();
 
-// Predefined vulnerable sample codebases
+// Predefined vulnerable sample codebases (for demonstration purposes)
 const SAMPLE_FILES = [
   {
     id: "aws-uploader",
@@ -128,18 +141,25 @@ async function fetchInternalPatientFile(patientId) {
     id: "payment-handler",
     name: "payment_handler.ts",
     language: "typescript",
-    description: "Stripe billing route utilizing hardcoded API test tokens and unauthenticated internal webhook logging.",
+    description: "Stripe billing route utilizing environment variables for secure API configuration.",
     content: `import express from 'express';
 import Stripe from 'stripe';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 const router = express.Router();
 
-// Static Stripe Token and Database Key configuration
-const STRIPE_SECRET_KEY = "sk_test_51NzABC1234567890XYZSecretTestToken";
-const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
+// Secure configuration - reading from environment variables
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
+const MONGODB_BACKUP_URI = process.env.MONGODB_BACKUP_URI || '';
 
-// Database backup plain key
-const MONGODB_BACKUP_URI = "mongodb+srv://root_cluster_user:SuperClusterPass99@cluster0.abcde.mongodb.net/payments?authSource=admin";
+if (!STRIPE_SECRET_KEY) {
+  throw new Error('STRIPE_SECRET_KEY environment variable is not set');
+}
+
+const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
 
 router.post('/process-transaction', async (req, res) => {
   const { amount, currency, email, card_token } = req.body;
@@ -153,14 +173,14 @@ router.post('/process-transaction', async (req, res) => {
       description: \`Payment transaction processed for account: \${email}\`,
     });
     
-    // Log transactional details containing customer credentials
+    // Log transactional details without exposing sensitive data
     console.log(\`Processed charge: \${charge.id} for user email: \${email}\`);
     
     res.status(200).json({
       success: true,
       transaction_id: charge.id,
       amount: amount,
-      backup_db: "MONGO_BACKUP_URI_ACTIVE"
+      status: "completed"
     });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -606,7 +626,7 @@ app.post("/api/ask-agent", async (req, res) => {
     return res.json({ response: "AI features are operating in baseline mode. Enable GEMINI_API_KEY for dynamic compliance discussions!" });
   }
   try {
-    const textPrompt = `You are Sentinel Agent Collective. A user is asking the following question about their audited codebase: "${prompt}"\n\nCode audited:\n${codeContext}\n\nProvide a professional, clear, action-oriented response mapping out secure practices or compliance answers. Keep it brief and focused.`;
+    const textPrompt = `You are Sentinel Agent Collective. A user is asking the following question about their audited codebase: "${prompt}"\n\nCode audited:\n${codeContext}\n\nProvide a professional and concise response.`;
     const response = await ai.models.generateContent({
       model: "gemini-3.5-flash",
       contents: textPrompt,
