@@ -1,0 +1,6 @@
+{
+  "name": "Sentinel Multi-Agent Compliance Workspace",
+  "description": "An advanced multi-agent workspace powered by MCP and Gemini, orchestrating a security guardian, dependency architect, and compliance scribe to audit codebases for PII, security vulnerabilities, and regulatory compliance.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
